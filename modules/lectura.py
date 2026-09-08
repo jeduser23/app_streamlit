@@ -47,16 +47,35 @@ def _seccion_multimedia(id_texto):
     infografia = run_query(
         "SELECT url, descripcion FROM infografias WHERE id_texto = %s LIMIT 1", (id_texto,), fetch_one=True
     )
+    
     col_v, col_i = st.columns(2)
+    
     with col_v:
         if video:
             st.caption(video["titulo"])
             st.video(video["url_embed"])
+            
     with col_i:
         if infografia:
             st.caption(infografia["descripcion"])
-            #st.image(infografia["url"], use_container_width=True)
-            st.image(url_final, width='stretch')
+            
+            # 1. Extraemos la URL de forma segura
+            url_base = infografia.get("url") if isinstance(infografia, dict) else None
+
+            # 2. Si existe, la limpiamos y la mostramos
+            if url_base:
+                # Corrección exacta y limpia para el formato raw de GitHub
+                if "github.com" in url_base and "raw.githubusercontent.com" not in url_base:
+                    url_final = url_base.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+                else:
+                    url_final = url_base
+                
+                # Despliegue de tu imagen optimizada de 600x400
+                st.image(url_final, width='stretch')
+            else:
+                st.info("📖 No hay una infografía disponible para esta lectura en este momento.")
+
+
 
 
 def pantalla_lectura(nombre_asignatura):
