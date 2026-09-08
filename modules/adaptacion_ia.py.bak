@@ -1,0 +1,124 @@
+"""
+modules/adaptacion_ia.py
+---------------------------
+Módulo de adaptación pedagógica con Inteligencia Artificial (Google AI Studio
+/ Gemini API). Aplica exactamente el prompt maestro definido en config.py,
+usando el nivel elegido por el estudiante (Básico, Medio, Avanzado).
+"""
+
+import json
+import time
+import streamlit as st
+from google import genai
+
+from config import GEMINI_API_KEY, GEMINI_MODEL, PROMPT_ADAPTACION, NIVELES_ADAPTACION
+from database.db import run_query
+from modules.lectura import obtener_texto_pretest
+from modules.utils import iniciar_cronometro
+from modules.evaluacion import _actualizar_avance
+
+
+def _cliente_gemini():
+    if not GEMINI_API_KEY:
+        st.error(
+            "No se ha configurado GEMINI_API_KEY. Defina su clave de Google AI Studio "
+            "en el archivo .env para habilitar la adaptación pedagógica."
+        )
+        st.stop()
+    return genai.Client(api_key=GEMINI_API_KEY)
+
+
+def generar_adaptacion(texto_original: str, nivel: str) -> dict:
+    """
+    Llama a la API de Gemini (Google AI Studio, SDK google-genai) con el
+    prompt maestro y retorna un diccionario con las claves: conceptos_clave,
+    ejemplo_practico, resumen_final. Incluye manejo de errores y un
+    reintento simple ante fallas de formato.
+    """
+    cliente = _cliente_gemini()
+    prompt = PROMPT_ADAPTACION.format(nivel=nivel, texto_original=texto_original)
+
+    for intento in range(2):
+        try:
+            respuesta = cliente.models.generate_content(model=GEMINI_MODEL, contents=prompt)
+            texto_bruto = respuesta.text.strip()
+            texto_bruto = texto_bruto.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            datos = json.loads(texto_bruto)
+            for clave in ("conceptos_clave", "ejemplo_practico", "resumen_final"):
+                if clave not in datos:
+                    raise ValueError(f"Falta la clave '{clave}' en la respuesta de la IA.")
+            return datos
+        except (json.JSONDecodeError, ValueError) as e:
+            if intento == 0:
+                time.sleep(1)
+                continue
+            st.error(f"La IA no devolvió un formato válido tras reintentar. Detalle: {e}")
+            return None
+        except Exception as e:  # errores de red / cuota / API key inválida
+            st.error(f"Error al conectar con Google AI Studio (Gemini API): {e}")
+            return None
+    return None
+
+
+def _guardar_texto_adaptado(id_asignatura, nivel, contenido_json):
+    contenido_texto = (
+        f"CONCEPTOS CLAVE:\n{contenido_json['conceptos_clave']}\n\n"
+        f"EJEMPLO PRÁCTICO:\n{contenido_json['ejemplo_practico']}\n\n"
+        f"RESUMEN FINAL:\n{contenido_json['resumen_final']}"
+    )
+    run_query(
+        """INSERT INTO textos (id_asignatura, titulo, contenido, tipo, nivel)
+           VALUES (%s, %s, %s, 'adaptado', %s)""",
+        (id_asignatura, f"Adaptación nivel {nivel}", contenido_texto, nivel),
+        commit=True,
+    )
+
+
+def pantalla_adaptacion(nombre_asignatura):
+    st.title(f"🤖 Adaptación pedagógica con IA: {nombre_asignatura}")
+
+    texto_original = obtener_texto_pretest(nombre_asignatura)
+    if not texto_original:
+        st.error("No se encontró el texto original para adaptar.")
+        return
+
+    st.image(
+        "https://via.placeholder.com/900x180.png?text=Adaptaci%C3%B3n+Pedag%C3%B3gica+con+IA",
+         width="stretch",
+    )
+
+    nivel = st.selectbox("Seleccione el nivel de adaptación:", NIVELES_ADAPTACION)
+
+    if st.button("✨ Generar Adaptación Pedagógica", type="primary", use_container_width=True):
+        with st.spinner("Generando adaptación con Gemini API..."):
+            resultado = generar_adaptacion(texto_original["contenido"], nivel)
+        if resultado:
+            st.session_state.adaptacion_actual = {
+                "nivel": nivel,
+                "contenido": resultado,
+                "asignatura": nombre_asignatura,
+            }
+            asignatura_row = run_query(
+                "SELECT id_asignatura FROM asignaturas WHERE nombre = %s",
+                (nombre_asignatura,),
+                fetch_one=True,
+            )
+            _guardar_texto_adaptado(asignatura_row["id_asignatura"], nivel, resultado)
+            _actualizar_avance(st.session_state.id_estudiante, asignatura_row["id_asignatura"], "adaptacion_generada")
+
+    adaptacion = st.session_state.get("adaptacion_actual")
+    if adaptacion and adaptacion["asignatura"] == nombre_asignatura:
+        st.success(f"Adaptación generada — Nivel: {adaptacion['nivel']}")
+        contenido = adaptacion["contenido"]
+        st.markdown("### 🔑 Conceptos clave")
+        st.write(contenido["conceptos_clave"])
+        st.markdown("### 💡 Ejemplo práctico")
+        st.write(contenido["ejemplo_practico"])
+        st.markdown("### 📌 Resumen final")
+        st.write(contenido["resumen_final"])
+
+        st.divider()
+        if st.button("📝 Realizar evaluación (Postest)", type="primary", use_container_width=True):
+            iniciar_cronometro()
+            st.session_state.pagina_actual = "postest"
+            st.rerun()
