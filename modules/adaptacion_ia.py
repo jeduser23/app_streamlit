@@ -83,8 +83,8 @@ def pantalla_adaptacion(nombre_asignatura):
         return
 
     st.image(
-        "https://via.placeholder.com/900x180.png?text=Adaptaci%C3%B3n+Pedag%C3%B3gica+con+IA",
-          use_column_width=True,
+            "https://placeholder.com",
+        width='stretch'
     )
 
     nivel = st.selectbox("Seleccione el nivel de adaptación:", NIVELES_ADAPTACION)
