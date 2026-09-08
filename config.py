@@ -48,7 +48,7 @@ DB_CONFIG = {
 # Google AI Studio / Gemini API MODEL_NAMES = "gemini-2.5-pro" MODEL_NAME = "gemini-3-flash-preview"
 # --------------------------------------------------------------------------
 GEMINI_API_KEY = _get("GEMINI_API_KEY", "")
-GEMINI_MODEL = _get("GEMINI_MODEL", "gemini-2.5-pro")
+GEMINI_MODEL = _get("GEMINI_MODEL", "gemini-3-flash-preview")
 
 # --------------------------------------------------------------------------
 # Seguridad
