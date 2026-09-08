@@ -55,8 +55,20 @@ def _seccion_multimedia(id_texto):
     with col_i:
         if infografia:
             st.caption(infografia["descripcion"])
-            #st.image(infografia["url"], use_container_width=True)
-            st.image(infografia["url"], use_column_width=True)
+            # Reemplaza la línea 59 antigua por este bloque de código seguro:
+if infografia and isinstance(infografia, dict) and infografia.get("url"):
+    url_final = infografia["url"]
+    
+    # Auto-corrección si copiaste la URL normal de GitHub en lugar de la Raw
+    if "github.com" in url_final and "://githubusercontent.com" not in url_final:
+        url_final = url_final.replace("github.com", "://githubusercontent.com").replace("/blob/", "/")
+    
+    # Dibujamos la imagen de forma segura con la sintaxis moderna de Streamlit
+    st.image(url_final, use_container_width=True)
+else:
+    # Si la base de datos devuelve None o está vacía, mostrará esto en vez de romperse
+    st.info("📖 No hay una infografía disponible para esta lectura en este momento.")
+
 
 
 def pantalla_lectura(nombre_asignatura):
