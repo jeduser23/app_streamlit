@@ -1,8 +1,5 @@
-streamlit==1.38.0
-mysql-connector-python==8.4.0
-google-genai==1.2.0
-plotly==5.24.0
-pandas==2.2.2
-bcrypt==4.2.0
-openpyxl==3.1.5
-python-dotenv==1.0.1
+streamlit
+mysql-connector-python
+pandas
+plotly
+google-genai
