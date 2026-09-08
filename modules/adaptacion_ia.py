@@ -19,13 +19,22 @@ from modules.evaluacion import _actualizar_avance
 
 
 def _cliente_gemini():
-    if not GEMINI_API_KEY:
+    # 1. Buscamos primero en config.py, luego en los Secrets de Streamlit Cloud
+    api_key_final = GEMINI_API_KEY
+    
+    if not api_key_final and "GEMINI_API_KEY" in st.secrets:
+        api_key_final = st.secrets["GEMINI_API_KEY"]
+
+    # 2. Si no aparece en ningún lado, mostramos el error
+    if not api_key_final:
         st.error(
             "No se ha configurado GEMINI_API_KEY. Defina su clave de Google AI Studio "
-            "en el archivo .env para habilitar la adaptación pedagógica."
+            "en el panel de Secrets de Streamlit Cloud o en su archivo .env local."
         )
         st.stop()
-    return genai.Client(api_key=GEMINI_API_KEY)
+        
+    return genai.Client(api_key=api_key_final)
+
 
 
 def generar_adaptacion(texto_original: str, nivel: str) -> dict:
@@ -83,7 +92,7 @@ def pantalla_adaptacion(nombre_asignatura):
         return
 
     st.image(
-            "https://placeholder.com",
+            "https://placehold.co",
         width='stretch'
     )
 
