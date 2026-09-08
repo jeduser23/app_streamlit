@@ -56,18 +56,7 @@ def _seccion_multimedia(id_texto):
         if infografia:
             st.caption(infografia["descripcion"])
             #st.image(infografia["url"], use_container_width=True)
-            if infografia and isinstance(infografia, dict) and infografia.get("url"):
-            url_final = infografia["url"]
-    
-            # Auto-corrección si la URL copiada es la normal de GitHub
-            if "github.com" in url_final and "://githubusercontent.com" not in url_final:
-                url_final = url_final.replace("github.com", "://githubusercontent.com").replace("/blob/", "/")
-            
-            # Nueva sintaxis oficial de Streamlit
             st.image(url_final, width='stretch')
-        else:
-            st.info("📖 No hay una infografía disponible para esta lectura en este momento.")
-        Usa el código con precaución.
 
 
 def pantalla_lectura(nombre_asignatura):
